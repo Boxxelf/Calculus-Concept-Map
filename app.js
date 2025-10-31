@@ -12,6 +12,47 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set SVG dimensions
     svg.attr("width", width).attr("height", height);
 
+    // --- Define SVG Gradients and Markers ---
+    const defs = svg.append("defs");
+
+    // Gradient for Calculus I (Blue gradient)
+    const gradientCalcI = defs.append("radialGradient")
+        .attr("id", "gradient-calc-i");
+    gradientCalcI.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "#5DADE2")
+        .attr("stop-opacity", 1);
+    gradientCalcI.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "#2874A6")
+        .attr("stop-opacity", 1);
+
+    // Gradient for Calculus II (Green gradient)
+    const gradientCalcII = defs.append("radialGradient")
+        .attr("id", "gradient-calc-ii");
+    gradientCalcII.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "#82E0AA")
+        .attr("stop-opacity", 1);
+    gradientCalcII.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "#239B56")
+        .attr("stop-opacity", 1);
+
+    // Arrow marker for directed edges
+    defs.append("marker")
+        .attr("id", "arrowhead")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 20)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "#95a5a6")
+        .attr("opacity", 0.6);
+
     const tooltip = d3.select(".tooltip");
 
     // --- Rationale Panel Selectors ---
@@ -26,9 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Setup Force Simulation ---
     const simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().id(d => d.id).distance(70))
-        .force("charge", d3.forceManyBody().strength(-250))
-        .force("center", d3.forceCenter(width / 2, height / 2));
+        .force("link", d3.forceLink().id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-400))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(30))
+        .alphaDecay(0.028)
+        .velocityDecay(0.5);
 
     let link, node, label;
     let allEdges = []; // To store all edges for neighbor finding
@@ -56,30 +100,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add circles to nodes
         node.append("circle")
-            .attr("r", 8)
+            .attr("r", 10)
             .attr("class", d => d.calc_level.replace(/\s+/g, '-').toLowerCase() === 'calculus-i' ? 'node-circle calc-i' : 'node-circle calc-ii');
 
         // Add labels to nodes
         label = node.append("text")
-            .text(d => d.id) // Show ID by default
+            .text(d => d.number_id) // Show numeric ID
             .attr("x", 12)
             .attr("y", 3)
             .attr("class", "node-label");
 
         // --- Interaction Events ---
         node.on("mouseover", (event, d) => {
-            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.transition().duration(50).style("opacity", .9);
             // Show SIMPLE tooltip (just the name)
             tooltip.html(`<strong>${d.label}</strong>`) 
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 28) + "px");
         })
         .on("mouseout", () => {
-            tooltip.transition().duration(500).style("opacity", 0);
+            tooltip.transition().duration(300).style("opacity", 0);
         })
         
         .on("click", (event, d_clicked) => {
             event.stopPropagation(); // Prevent SVG click from firing
+            
+            // Fix the clicked node position to prevent jitter
+            d_clicked.fx = d_clicked.x;
+            d_clicked.fy = d_clicked.y;
             
             // 1. Show Rationale in Sidebar
             showRationale(d_clicked);
@@ -163,6 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // This function now resets highlights AND hides the panel
     function resetGraphView() {
+        // Release all fixed node positions
+        node.each(d => {
+            d.fx = null;
+            d.fy = null;
+        });
+        
         node.classed("selected", false);
         node.classed("faded", false);
         link.classed("faded", false);
@@ -174,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Drag Functionality ---
     function drag(simulation) {
         function dragstarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
+            if (!event.active) simulation.alphaTarget(0.5).restart();
             d.fx = d.x;
             d.fy = d.y;
         }
@@ -184,8 +238,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         function dragended(event, d) {
             if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
+            // Keep position fixed if node was clicked/selected
+            if (!d3.select(this).classed("selected")) {
+                d.fx = null;
+                d.fy = null;
+            }
         }
         return d3.drag()
             .on("start", dragstarted)
