@@ -3,64 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gates Visualization</title>
+    <title>Calculus Concept Map</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="instructions-overlay" class="instructions-overlay">
+        <div class="instructions-modal">
+            <button type="button" id="instructions-close" class="instructions-close" aria-label="Close instructions">&times;</button>
+            <h2>How to Use the Calculus Concept Map</h2>
+            <p class="instructions-tagline">Discover how computer science topics connect to calculus concepts.</p>
+            <ol class="instructions-steps">
+                <li><strong>Select CS topics:</strong> Use the list under "CS Topics" to highlight related calculus nodes. A red glow indicates stronger connections.</li>
+                <li><strong>Browse the course hierarchy:</strong> Expand items under "Calculus Courses" to locate specific topics and spotlight them within the map.</li>
+                <li><strong>Inspect details:</strong> Click any calculus node to view filtered rationales that match the currently selected CS topics. Incoming prerequisite nodes stay highlighted, while outgoing nodes fade.</li>
+                <li><strong>Multi-course insights:</strong> When all courses are selected, node size scales with total connections so key topics stand out.</li>
+                <li><strong>Navigating the map:</strong> The full graph is visible on load. Interactions trigger smart zooming; you can also drag and scroll to adjust the view manually.</li>
+            </ol>
+            <div class="instructions-actions">
+                <button type="button" id="instructions-dismiss" class="primary-btn">Start Exploring</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="sidebar-left">
-            <h2>Filters</h2>
-            <div class="filters">
-                <strong>CS Category:</strong>
-                <button class="filter-btn" data-filter-type="cs_categories" data-filter-value="Machine Learning">Machine Learning</button>
-                <button class="filter-btn" data-filter-type="cs_categories" data-filter-value="Algorithms">Algorithms</button>
-                <button class="filter-btn" data-filter-type="cs_categories" data-filter-value="Artificial Intelligence">Artificial Intelligence</button>
-                <button class="filter-btn" data-filter-type="cs_categories" data-filter-value="Computer Graphic">Computer Graphic</button>
-                
-                <strong>Calculus Level:</strong>
-                <button class="filter-btn" data-filter-type="calc_level" data-filter-value="Calculus I">Calculus I</button>
-                <button class="filter-btn" data-filter-type="calc_level" data-filter-value="Calculus II">Calculus II</button>
-                
-                <strong>View:</strong>
-                <button class="filter-btn active" data-filter-type="all" data-filter-value="all">Show All</button>
+            <div class="sidebar-header">
+                <h2>Explore</h2>
+                <button type="button" id="instructions-open" class="instructions-button">Instructions</button>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>CS Topics</h3>
+                <div id="cs-topic-tree" class="cs-topic-tree">
+                    <!-- CS topics will be inserted here -->
+                </div>
+                <button type="button" id="cs-topic-clear" class="tertiary-btn">Clear CS Selection</button>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Calculus Courses</h3>
+                <div id="calculus-tree" class="calculus-tree">
+                    <!-- Calculus hierarchy will be inserted here -->
+                </div>
             </div>
         </div>
 
         <div class="main-content">
-            <h1>Gates Visualization</h1>
+            <div class="main-header">
+                <h1>Calculus Concept Map</h1>
+                <div id="course-selection-summary" class="course-selection-summary"></div>
+            </div>
             <div class="chart-container">
                 <svg id="chart"></svg>
             </div>
         </div>
         
         <div class="sidebar-right">
-            
-            <div id="instructions">
-                <h3>How to Use This Chart</h3>
-                <p>Welcome to the interactive Calculus prerequisite chart for Computer Science.</p>
-                
-                <strong>1. Explore Topics</strong>
-                <p>Hover over any node (circle) on the graph to see the full name of the Calculus topic.</p>
-                
-                <strong>2. View Details & Connections</strong>
-                <p><strong>Click on a node</strong> to:</p>
-                <ul>
-                    <li>See its details and CS rationales appear in this panel.</li>
-                    <li>Highlight the node and its direct prerequisite and follow-up topics. All other topics will fade.</li>
-                </ul>
-
-                <strong>3. Filter the Graph</strong>
-                <p>Use the filter buttons on the left sidebar to narrow the graph by CS field (e.g., "Machine Learning") or by Calculus level.</p>
-                
-                <strong>4. Reset View</strong>
-                <p><strong>Click on the white background</strong> of the chart at any time to clear the selection, hide details, and reset the graph.</p>
-            </div>
-
             <div id="rationale-display" class="hidden">
                 <h3>Details</h3>
                 <h4 id="rationale-title"></h4>
                 <p id="rationale-level"></p>
                 <div id="rationale-content"></div>
+            </div>
+
+            <div id="empty-selection" class="empty-state">
+                <h3>Select a Calculus Topic</h3>
+                <p>Click any node in the visualization or in the hierarchy to view rationales that match the active CS topic filters.</p>
             </div>
         </div>
     </div>
@@ -68,6 +76,6 @@
     <div class="tooltip" style="opacity:0;"></div>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20"></script>
 </body>
 </html>

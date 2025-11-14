@@ -26,10 +26,10 @@ h1 {
 }
 
 .sidebar-left {
-    width: 300px;
+    width: 320px;
     flex-shrink: 0;
     background-color: #f0f0f0;
-    padding: 20px;
+    padding: 24px 20px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     overflow-y: auto;
     height: 100vh;
@@ -49,12 +49,238 @@ h1 {
 
 .main-content {
     flex-grow: 1;
-    padding: 20px;
+    padding: 24px 28px;
     display: flex;
     flex-direction: column;
     height: 100vh;
     box-sizing: border-box;
     min-width: 0; /* Allow main content to shrink */
+}
+
+/* Sidebar sections */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.sidebar-header h2 {
+    font-size: 1.3rem;
+    margin: 0;
+}
+
+.instructions-button,
+.primary-btn,
+.tertiary-btn {
+    border: 1px solid #3d5afe;
+    color: #3d5afe;
+    background-color: transparent;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.instructions-button:hover,
+.tertiary-btn:hover {
+    background-color: rgba(61, 90, 254, 0.1);
+}
+
+.primary-btn {
+    background-color: #3d5afe;
+    color: #fff;
+    border-radius: 24px;
+    padding: 10px 24px;
+    font-size: 0.95rem;
+}
+
+.primary-btn:hover {
+    box-shadow: 0 6px 16px rgba(61, 90, 254, 0.35);
+}
+
+.tertiary-btn {
+    width: 100%;
+    margin-top: 12px;
+}
+
+.sidebar-section {
+    margin-bottom: 28px;
+}
+
+.sidebar-section h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.cs-topic-tree,
+.calculus-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tree-course,
+.tree-core,
+.tree-topic,
+.cs-topic-button,
+.cs-category-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.tree-course > .course-checkbox,
+.tree-core > .core-summary {
+    margin-left: auto;
+}
+
+/* Calculus I - Blue theme */
+.tree-course.calculus-i {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-color: #5DADE2;
+    color: #1565c0;
+}
+
+.tree-course.calculus-i:hover {
+    background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+    border-color: #2874A6;
+}
+
+/* Calculus II - Green theme */
+.tree-course.calculus-ii {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border-color: #82E0AA;
+    color: #2e7d32;
+}
+
+.tree-course.calculus-ii:hover {
+    background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+    border-color: #239B56;
+}
+
+/* Generic hover for other elements (not Calculus I/II) */
+.tree-core:hover:not(.disabled),
+.tree-topic:hover:not(.disabled),
+.cs-topic-button:hover,
+.cs-category-button:hover {
+    border-color: #9ca3af;
+    background-color: #f1f5f9;
+}
+
+.tree-course.active,
+.tree-core.active,
+.tree-topic.active,
+.cs-topic-button.active {
+    border-color: #2563eb;
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.tree-core,
+.tree-topic {
+    margin-left: 16px;
+}
+
+.tree-topic {
+    font-weight: 500;
+    text-align: left;
+}
+
+/* Disabled state for course children */
+.tree-core.disabled,
+.tree-topic.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    background-color: #f5f5f5;
+}
+
+.tree-core.disabled .tree-core-left,
+.tree-topic.disabled .topic-label {
+    color: #9ca3af;
+}
+
+.tree-topic:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    background-color: #f5f5f5;
+}
+
+.tree-course-left,
+.tree-core-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    text-align: left;
+}
+
+.core-summary {
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.tree-toggle-icon {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.tree-children {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.tree-children.open {
+    display: flex;
+}
+
+.course-checkbox {
+    margin-right: 8px;
+    accent-color: #2563eb;
+}
+
+.topic-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    align-items: flex-start;
+}
+
+.topic-label small {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.course-selection-summary {
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-align: right;
+}
+
+.main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
 }
 
 .chart-container {
@@ -63,77 +289,15 @@ h1 {
     min-height: 0; /* Important for flex-grow to work in a column */
     border: 1px solid #ddd;
     background-color: #fff;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    position: relative;
 }
 
 #chart {
     width: 100%;
     height: 100%;
 }
-
-/* Filters */
-.filters strong {
-    display: block;
-    margin-top: 15px;
-    margin-bottom: 5px;
-    font-size: 0.9rem;
-    color: #555;
-}
-
-.filter-btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 5px;
-    border: 1px solid #ccc;
-    background-color: #fff;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    text-align: left;
-    box-sizing: border-box;
-}
-
-.filter-btn:hover {
-    background-color: #e9e9e9;
-    border-color: #999;
-}
-
-.filter-btn.active {
-    background-color: #007bff;
-    color: white;
-    border-color: #007bff;
-}
-
-/* NEW: Instruction Panel (in right sidebar) */
-#instructions {
-    padding-top: 5px;
-}
-#instructions h3 {
-    margin-top: 0;
-}
-#instructions p {
-    font-size: 0.9rem;
-    line-height: 1.5;
-    color: #333;
-}
-#instructions strong {
-    display: block;
-    font-size: 1rem;
-    margin-top: 15px;
-    margin-bottom: 5px;
-    color: #000;
-}
-#instructions ul {
-    font-size: 0.9rem;
-    padding-left: 20px;
-    margin-top: -5px;
-}
-#instructions li {
-    margin-bottom: 5px;
-}
-
 
 /* Rationale Display (in right sidebar) */
 #rationale-display {
@@ -175,18 +339,22 @@ h1 {
 }
 
 /* Graph Styles */
+.zoom-layer {
+    cursor: grab;
+}
+
 .link {
-    stroke: #95a5a6;
-    stroke-opacity: 0.4;
-    stroke-width: 2px;
+    stroke: #64748b;
+    stroke-opacity: 0.5;
+    stroke-width: 1.5px;
     transition: all 0.3s ease;
     marker-end: url(#arrowhead);
 }
 
 .link:hover {
-    stroke: #3498db;
+    stroke: #475569;
     stroke-opacity: 0.8;
-    stroke-width: 3px;
+    stroke-width: 2px;
 }
 
 .node {
@@ -231,6 +399,28 @@ h1 {
     filter: drop-shadow(0 0 8px rgba(231, 76, 60, 0.6));
 }
 
+.node.cs-highlight .node-circle {
+    stroke: #ff4d4f;
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 12px rgba(255, 77, 79, 0.75));
+}
+
+.node.incoming .node-circle {
+    stroke: #2563eb;
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 10px rgba(37, 99, 235, 0.55));
+}
+
+.node.outgoing {
+    opacity: 0.18;
+    filter: grayscale(100%) blur(0.4px);
+}
+
+.node.course-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 .node.faded {
     opacity: 0.15;
     filter: grayscale(100%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
@@ -239,6 +429,21 @@ h1 {
 .link.faded {
     opacity: 0.08;
     stroke-width: 1px;
+}
+
+.link.incoming-link {
+    stroke: #2563eb;
+    stroke-width: 2.4px;
+    opacity: 0.85;
+}
+
+.link.outgoing-link {
+    stroke: #94a3b8;
+    opacity: 0.18;
+}
+
+.link.course-hidden {
+    opacity: 0;
 }
 
 /* Tooltip (Simple one) */
@@ -257,6 +462,167 @@ h1 {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     max-width: 300px;
     font-weight: 500;
+}
+
+/* CS Submenu Styles */
+#cs-category-menu {
+    margin-bottom: 10px;
+}
+
+.cs-submenu {
+    margin-left: 15px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    padding-left: 10px;
+    border-left: 2px solid #ddd;
+}
+
+.submenu-btn {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    margin-left: 0;
+    margin-bottom: 3px;
+    background-color: #fafafa;
+}
+
+.submenu-btn:hover {
+    background-color: #f0f0f0;
+    border-color: #bbb;
+}
+
+.submenu-btn.active {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border-color: #1976d2;
+    font-weight: 500;
+}
+
+.cs-category-btn {
+    position: relative;
+}
+
+.cs-category-btn.active {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Multi-node display styles */
+.multi-node-title {
+    font-size: 1rem;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    color: #333;
+    font-weight: 600;
+}
+
+.multi-node-level {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: #666;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.node-separator {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 15px 0;
+}
+
+.no-rationale-message {
+    color: #999;
+    font-style: italic;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+/* Instructions overlay */
+.instructions-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.instructions-overlay.hidden {
+    display: none;
+}
+
+.instructions-modal {
+    width: min(680px, 100%);
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px 36px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.2);
+    position: relative;
+}
+
+.instructions-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+    line-height: 1;
+}
+
+.instructions-modal h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 1.6rem;
+    color: #1f2937;
+}
+
+.instructions-tagline {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #4b5563;
+    font-size: 0.95rem;
+}
+
+.instructions-steps {
+    padding-left: 20px;
+    margin-bottom: 24px;
+    color: #374151;
+    line-height: 1.6;
+}
+
+.instructions-steps li {
+    margin-bottom: 12px;
+}
+
+.instructions-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.empty-state {
+    margin-top: 40px;
+    text-align: left;
+}
+
+.empty-state h3 {
+    margin-top: 0;
+    color: #1f2937;
+}
+
+.empty-state p {
+    color: #4b5563;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.empty-state.hidden {
+    display: none;
 }
 
 /* Utility */

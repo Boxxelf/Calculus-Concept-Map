@@ -1,303 +1,889 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const svg = d3.select('#chart');
+    const container = d3.select('.chart-container');
+    const tooltip = d3.select('.tooltip');
+    const rationaleDisplay = d3.select('#rationale-display');
+    const rationaleTitle = d3.select('#rationale-title');
+    const rationaleLevel = d3.select('#rationale-level');
+    const rationaleContent = d3.select('#rationale-content');
+    const emptyState = d3.select('#empty-selection');
+    const instructionsOverlay = d3.select('#instructions-overlay');
+    const instructionsOpenBtn = d3.select('#instructions-open');
+    const instructionsCloseBtn = d3.select('#instructions-close');
+    const instructionsDismissBtn = d3.select('#instructions-dismiss');
+    const courseSummary = d3.select('#course-selection-summary');
+    const csTopicClearBtn = d3.select('#cs-topic-clear');
 
-    // --- Setup SVG and Dimensions ---
-    const svg = d3.select("#chart");
-    const container = d3.select(".chart-container");
-    
-    // Get actual dimensions from the container
     const containerRect = container.node().getBoundingClientRect();
-    const width = containerRect.width;
-    const height = containerRect.height;
-    
-    // Set SVG dimensions
-    svg.attr("width", width).attr("height", height);
+    const state = {
+        width: containerRect.width,
+        height: containerRect.height,
+        nodes: [],
+        edges: [],
+        nodeById: new Map(),
+        zoom: null,
+        zoomLayer: null,
+        simulation: null,
+        linkSelection: null,
+        nodeSelection: null,
+        circleSelection: null,
+        topicLookupByName: new Map(),
+        topicMetaByCode: new Map(),
+        calculusHierarchy: new Map(),
+        nodeIdByTopicCode: new Map(),
+        allCourses: [],
+        selectedCourses: new Set(),
+        selectedNodeId: null,
+        incomingNodeIds: new Set(),
+        outgoingNodeIds: new Set(),
+        selectedCSTopics: new Map(),
+        csHighlightLevels: new Map(),
+        maxDegree: 0,
+        activeTopicCode: null,
+        initialFitDone: false
+    };
 
-    // --- Define SVG Gradients and Markers ---
-    const defs = svg.append("defs");
+    svg.attr('width', state.width).attr('height', state.height);
 
-    // Gradient for Calculus I (Blue gradient)
-    const gradientCalcI = defs.append("radialGradient")
-        .attr("id", "gradient-calc-i");
-    gradientCalcI.append("stop")
-        .attr("offset", "0%")
-        .attr("stop-color", "#5DADE2")
-        .attr("stop-opacity", 1);
-    gradientCalcI.append("stop")
-        .attr("offset", "100%")
-        .attr("stop-color", "#2874A6")
-        .attr("stop-opacity", 1);
+    const defs = svg.append('defs');
 
-    // Gradient for Calculus II (Green gradient)
-    const gradientCalcII = defs.append("radialGradient")
-        .attr("id", "gradient-calc-ii");
-    gradientCalcII.append("stop")
-        .attr("offset", "0%")
-        .attr("stop-color", "#82E0AA")
-        .attr("stop-opacity", 1);
-    gradientCalcII.append("stop")
-        .attr("offset", "100%")
-        .attr("stop-color", "#239B56")
-        .attr("stop-opacity", 1);
+    const gradientCalcI = defs.append('radialGradient').attr('id', 'gradient-calc-i');
+    gradientCalcI.append('stop').attr('offset', '0%').attr('stop-color', '#5DADE2').attr('stop-opacity', 1);
+    gradientCalcI.append('stop').attr('offset', '100%').attr('stop-color', '#2874A6').attr('stop-opacity', 1);
 
-    // Arrow marker for directed edges
-    defs.append("marker")
-        .attr("id", "arrowhead")
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 20)
-        .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("d", "M0,-5L10,0L0,5")
-        .attr("fill", "#95a5a6")
-        .attr("opacity", 0.6);
+    const gradientCalcII = defs.append('radialGradient').attr('id', 'gradient-calc-ii');
+    gradientCalcII.append('stop').attr('offset', '0%').attr('stop-color', '#82E0AA').attr('stop-opacity', 1);
+    gradientCalcII.append('stop').attr('offset', '100%').attr('stop-color', '#239B56').attr('stop-opacity', 1);
 
-    const tooltip = d3.select(".tooltip");
+    const arrowMarker = defs.append('marker')
+        .attr('id', 'arrowhead')
+        .attr('viewBox', '0 0 10 10')
+        .attr('refX', 18)
+        .attr('refY', 5)
+        .attr('markerWidth', 8)
+        .attr('markerHeight', 8)
+        .attr('orient', 'auto')
+        .attr('markerUnits', 'userSpaceOnUse');
 
-    // --- Rationale Panel Selectors ---
-    const rationaleDisplay = d3.select("#rationale-display");
-    const rationaleTitle = d3.select("#rationale-title");
-    const rationaleLevel = d3.select("#rationale-level");
-    const rationaleContent = d3.select("#rationale-content");
-    const instructions = d3.select("#instructions"); // <-- NEW: Select the instructions panel
-    
-    // --- Clear selection/highlight on SVG background click ---
-    svg.on('click', resetGraphView);
+    arrowMarker.append('path')
+        .attr('d', 'M0,0 L10,5 L0,10 L2,5 Z')
+        .attr('fill', '#64748b')
+        .attr('stroke', '#475569')
+        .attr('stroke-width', '0.5')
+        .attr('opacity', 0.7);
 
-    // --- Setup Force Simulation ---
-    const simulation = d3.forceSimulation()
-        .force("link", d3.forceLink().id(d => d.id).distance(100))
-        .force("charge", d3.forceManyBody().strength(-400))
-        .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("collision", d3.forceCollide().radius(30))
-        .alphaDecay(0.028)
-        .velocityDecay(0.5);
+    const zoomLayer = svg.append('g').attr('class', 'zoom-layer');
+    const linkLayer = zoomLayer.append('g').attr('class', 'links');
+    const nodeLayer = zoomLayer.append('g').attr('class', 'nodes');
 
-    let link, node, label;
-    let allEdges = []; // To store all edges for neighbor finding
+    state.zoomLayer = zoomLayer;
 
-    // --- Load Data and Initialize Graph ---
-    d3.json("graph_data.json").then(graph => {
-        allEdges = graph.edges; // Store edges
-
-        // Create links
-        link = svg.append("g")
-            .attr("class", "links")
-            .selectAll("line")
-            .data(graph.edges)
-            .enter().append("line")
-            .attr("class", "link");
-
-        // Create nodes
-        node = svg.append("g")
-            .attr("class", "nodes")
-            .selectAll("g")
-            .data(graph.nodes)
-            .enter().append("g")
-            .attr("class", "node")
-            .call(drag(simulation)); // Add drag behavior
-
-        // Add circles to nodes
-        node.append("circle")
-            .attr("r", 10)
-            .attr("class", d => d.calc_level.replace(/\s+/g, '-').toLowerCase() === 'calculus-i' ? 'node-circle calc-i' : 'node-circle calc-ii');
-
-        // Add labels to nodes
-        label = node.append("text")
-            .text(d => d.number_id) // Show numeric ID
-            .attr("x", 12)
-            .attr("y", 3)
-            .attr("class", "node-label");
-
-        // --- Interaction Events ---
-        node.on("mouseover", (event, d) => {
-            tooltip.transition().duration(50).style("opacity", .9);
-            // Show SIMPLE tooltip (just the name)
-            tooltip.html(`<strong>${d.label}</strong>`) 
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 28) + "px");
-        })
-        .on("mouseout", () => {
-            tooltip.transition().duration(300).style("opacity", 0);
-        })
-        
-        .on("click", (event, d_clicked) => {
-            event.stopPropagation(); // Prevent SVG click from firing
-            
-            // Fix the clicked node position to prevent jitter
-            d_clicked.fx = d_clicked.x;
-            d_clicked.fy = d_clicked.y;
-            
-            // 1. Show Rationale in Sidebar
-            showRationale(d_clicked);
-
-            // 2. Find all neighbors
-            const neighborIDs = new Set();
-            neighborIDs.add(d_clicked.id); // Add the clicked node itself
-
-            allEdges.forEach(edge => {
-                if (edge.source.id === d_clicked.id) {
-                    neighborIDs.add(edge.target.id);
-                } else if (edge.target.id === d_clicked.id) {
-                    neighborIDs.add(edge.source.id);
-                }
-            });
-
-            // 3. Apply classes
-            // Highlight clicked node
-            node.classed("selected", n => n.id === d_clicked.id);
-            // Fade all nodes NOT in the neighbor set
-            node.classed("faded", n => !neighborIDs.has(n.id));
-            
-            // Fade all links that are NOT between two nodes in the neighbor set
-            link.classed("faded", l => {
-                return !(neighborIDs.has(l.source.id) && neighborIDs.has(l.target.id));
-            });
+    const zoomBehaviour = d3.zoom()
+        .scaleExtent([0.4, 4])
+        .on('zoom', (event) => {
+            state.zoomLayer.attr('transform', event.transform);
         });
 
-        // --- Connect Simulation to Elements ---
-        simulation
-            .nodes(graph.nodes)
-            .on("tick", ticked);
+    state.zoom = zoomBehaviour;
+    svg.call(zoomBehaviour);
 
-        simulation.force("link")
-            .links(graph.edges);
+    if (!instructionsOverlay.empty()) {
+        const hideInstructions = () => instructionsOverlay.classed('hidden', true);
+        instructionsOpenBtn.on('click', () => instructionsOverlay.classed('hidden', false));
+        instructionsCloseBtn.on('click', hideInstructions);
+        instructionsDismissBtn.on('click', hideInstructions);
+    }
 
-        function ticked() {
-            link
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
+    if (!csTopicClearBtn.empty()) {
+        csTopicClearBtn.on('click', () => {
+            clearSelectedCSTopics();
+            updateCSHighlights();
+            updateNodeStyling();
+            if (state.selectedNodeId) {
+                const selectedNode = state.nodeById.get(state.selectedNodeId);
+                if (selectedNode) {
+                    showRationale(selectedNode);
+                }
+            }
+        });
+    }
 
-            node
-                .attr("transform", d => `translate(${d.x},${d.y})`);
+    Promise.all([
+        d3.json('graph_data.json'),
+        d3.text('Calculus topic labeling scheme.csv')
+    ]).then(([graph, calculusCsvText]) => {
+        if (!graph) {
+            throw new Error('Graph data missing');
         }
-    }).catch(error => {
-        console.error("Error loading graph data:", error);
+
+        const calculusItems = parseCalculusCsv(calculusCsvText);
+        const topicLookup = buildTopicLookup(calculusItems);
+
+        state.topicLookupByName = topicLookup.byName;
+        state.topicMetaByCode = topicLookup.byCode;
+        state.calculusHierarchy = topicLookup.hierarchy;
+        state.allCourses = Array.from(topicLookup.hierarchy.keys());
+
+        initializeGraph(graph);
+        renderCalculusTree(state.calculusHierarchy);
+        renderCSTopicTree(state.nodes);
+        updateCourseSummary();
+        applyCourseFilter();
+        updateNodeStyling();
+
+        window.setTimeout(() => {
+            fitGraphToView({ animate: true });
+            state.initialFitDone = true;
+        }, 900);
+    }).catch((error) => {
+        console.error('Error loading visualization data:', error);
+        alert('An error occurred while loading the visualization. Please check the console for details.');
     });
 
-    // --- Rationale Panel Functions ---
-    function showRationale(d) {
-        rationaleTitle.text(d.label);
-        rationaleLevel.text(d.calc_level);
-        rationaleContent.html(""); // Clear old content
-
-        // Get categories that have rationales
-        const categoriesWithRationales = Object.keys(d.rationales || {});
-
-        if (categoriesWithRationales.length === 0) {
-            rationaleContent.append("p").text("No specific rationales available for this topic.");
-        } else {
-            categoriesWithRationales.forEach(category => {
-                // Add category title
-                rationaleContent.append("h5").text(category);
-                
-                // Add rationale items
-                const items = d.rationales[category];
-                items.forEach(item => {
-                    const itemDiv = rationaleContent.append("div")
-                        .attr("class", "rationale-item");
-                    
-                    itemDiv.html(`<strong>${item.cs_topic}:</strong> ${item.rationale}`);
-                });
-            });
+    svg.on('click', (event) => {
+        const isNode = event.target.closest ? event.target.closest('.node') : null;
+        if (!isNode) {
+            resetCalculusSelection({ shouldRefit: true });
         }
-        
-        rationaleDisplay.classed("hidden", false);
-        instructions.classed("hidden", true); // <-- UPDATED: Hide instructions
-    }
+    });
 
-    // This function now resets highlights AND hides the panel
-    function resetGraphView() {
-        // Release all fixed node positions
-        node.each(d => {
-            d.fx = null;
-            d.fy = null;
+    window.addEventListener('resize', handleResize);
+
+    function initializeGraph(graph) {
+        state.nodes = graph.nodes.map((node) => ({ ...node }));
+        state.edges = graph.edges.map((edge) => ({ ...edge }));
+
+        state.nodes.forEach((node) => {
+            const normalizedLabel = normalizeText(node.label);
+        const lookupMatch = state.topicLookupByName.get(normalizedLabel);
+
+            if (lookupMatch) {
+                node.topicCode = lookupMatch.topicCode;
+                node.topicName = lookupMatch.topicName;
+                node.course = lookupMatch.course || node.calc_level;
+                node.coreIdea = lookupMatch.coreIdea;
+                state.nodeIdByTopicCode.set(lookupMatch.topicCode, node.id);
+            } else {
+                node.topicCode = node.number_id != null ? String(node.number_id) : node.id;
+                node.topicName = node.label;
+                node.course = node.calc_level || 'Course';
+                console.warn('Topic mapping not found for:', node.label);
+            }
+
+            state.nodeById.set(node.id, node);
+        node.isCourseVisible = true;
         });
-        
-        node.classed("selected", false);
-        node.classed("faded", false);
-        link.classed("faded", false);
-        rationaleDisplay.classed("hidden", true);
-        instructions.classed("hidden", false); // <-- UPDATED: Show instructions
+
+        const degreeMap = new Map();
+        state.edges.forEach((edge) => {
+            degreeMap.set(edge.source, (degreeMap.get(edge.source) || 0) + 1);
+            degreeMap.set(edge.target, (degreeMap.get(edge.target) || 0) + 1);
+        });
+
+        state.nodes.forEach((node) => {
+            node.degree = degreeMap.get(node.id) || 0;
+        });
+
+        state.maxDegree = d3.max(state.nodes, (node) => node.degree) || 1;
+
+        if (state.allCourses.length === 0) {
+            state.allCourses = Array.from(new Set(state.nodes.map((node) => node.course || node.calc_level).filter(Boolean)));
+        }
+
+        state.selectedCourses = new Set(state.allCourses);
+
+        state.linkSelection = linkLayer.selectAll('line')
+            .data(state.edges)
+            .enter()
+            .append('line')
+            .attr('class', 'link');
+
+        state.nodeSelection = nodeLayer.selectAll('g')
+            .data(state.nodes, (d) => d.id)
+            .enter()
+            .append('g')
+            .attr('class', 'node')
+            .call(dragBehaviour());
+
+        state.circleSelection = state.nodeSelection.append('circle')
+            .attr('class', (d) => {
+                const level = (d.course || d.calc_level || '').replace(/\s+/g, '-').toLowerCase();
+                if (level === 'calculus-i') {
+                    return 'node-circle calc-i';
+                }
+                if (level === 'calculus-ii') {
+                    return 'node-circle calc-ii';
+                }
+                return 'node-circle';
+            })
+            .attr('r', (d) => computeNodeRadius(d));
+
+        state.nodeSelection.append('text')
+            .attr('class', 'node-label')
+            .attr('x', 12)
+            .attr('y', 4)
+            .text((d) => d.topicCode || d.number_id || d.id);
+
+        state.nodeSelection
+            .on('mouseover', (event, nodeData) => {
+                tooltip.transition().duration(80).style('opacity', 0.95);
+                tooltip.html(`<strong>${nodeData.topicName || nodeData.label}</strong>`)
+                    .style('left', `${event.pageX + 12}px`)
+                    .style('top', `${event.pageY - 28}px`);
+            })
+            .on('mouseout', () => {
+                tooltip.transition().duration(200).style('opacity', 0);
+            })
+            .on('click', (event, nodeData) => {
+                event.stopPropagation();
+                selectCalculusNode(nodeData);
+            });
+
+        state.simulation = d3.forceSimulation(state.nodes)
+            .force('link', d3.forceLink(state.edges).id((d) => d.id).distance(120))
+            .force('charge', d3.forceManyBody().strength(-420))
+            .force('center', d3.forceCenter(state.width / 2, state.height / 2))
+            .force('collision', d3.forceCollide().radius((d) => computeNodeRadius(d) + 12))
+            .alphaDecay(0.025)
+            .on('tick', () => {
+                state.linkSelection
+                    .attr('x1', (d) => d.source.x)
+                    .attr('y1', (d) => d.source.y)
+                    .attr('x2', (d) => d.target.x)
+                    .attr('y2', (d) => d.target.y);
+
+                state.nodeSelection.attr('transform', (d) => `translate(${d.x},${d.y})`);
+            });
     }
 
+    function dragBehaviour() {
+        function dragstarted(event, nodeData) {
+            if (!event.active && state.simulation) {
+                state.simulation.alphaTarget(0.3).restart();
+            }
+            nodeData.fx = nodeData.x;
+            nodeData.fy = nodeData.y;
+        }
 
-    // --- Drag Functionality ---
-    function drag(simulation) {
-        function dragstarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.5).restart();
-            d.fx = d.x;
-            d.fy = d.y;
+        function dragged(event, nodeData) {
+            nodeData.fx = event.x;
+            nodeData.fy = event.y;
         }
-        function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
-        }
-        function dragended(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
-            // Keep position fixed if node was clicked/selected
-            if (!d3.select(this).classed("selected")) {
-                d.fx = null;
-                d.fy = null;
+
+        function dragended(event, nodeData) {
+            if (!event.active && state.simulation) {
+                state.simulation.alphaTarget(0);
+            }
+            if (nodeData.id !== state.selectedNodeId) {
+                nodeData.fx = null;
+                nodeData.fy = null;
             }
         }
-        return d3.drag()
-            .on("start", dragstarted)
-            .on("drag", dragged)
-            .on("end", dragended);
+
+        return d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended);
     }
 
-    // --- Filter Functionality ---
-    const filterButtons = d3.selectAll('.filter-btn');
-    
-    filterButtons.on('click', (event) => {
-        const btn = d3.select(event.currentTarget);
-        const filterType = btn.attr('data-filter-type');
-        const filterValue = btn.attr('data-filter-value');
-        
-        // Update button active state
-        filterButtons.classed('active', false);
-        btn.classed('active', true);
-        
-        // Reset any highlights before applying filter
-        resetGraphView(); 
-
-        // Apply filter
-        if (filterType === 'all') {
-            node.classed('faded', false);
-            link.classed('faded', false);
-        } else {
-            // Apply fade to nodes
-            node.classed('faded', d => {
-                if (filterType === 'cs_categories') {
-                    return !d.cs_categories.includes(filterValue);
-                }
-                if (filterType === 'calc_level') {
-                    return d.calc_level !== filterValue;
-                }
-                return false;
-            });
-
-            // Helper to check if a node is faded by the filter
-            const isNodeFilteredOut = (nodeData) => {
-                if (filterType === 'cs_categories') {
-                    return !nodeData.cs_categories.includes(filterValue);
-                }
-                if (filterType === 'calc_level') {
-                    return nodeData.calc_level !== filterValue;
-                }
-                return false;
-            };
-
-            // Apply fade to links
-            link.classed('faded', l => {
-                // Fade link if EITHER end is filtered out
-                return isNodeFilteredOut(l.source) || isNodeFilteredOut(l.target);
-            });
+    function parseCalculusCsv(rawText) {
+        if (!rawText) {
+            return [];
         }
-    });
 
+        const strippedLines = rawText.split(/\r?\n/).filter((line, index) => {
+            if (index === 0 && /^table/i.test(line.trim())) {
+                return false;
+            }
+            return line.trim().length > 0;
+        });
+
+        const parsedRows = d3.csvParseRows(strippedLines.join('\n'));
+        const headerIndex = parsedRows.findIndex((row) => row[0] === 'Course');
+        const dataRows = headerIndex >= 0 ? parsedRows.slice(headerIndex + 1) : parsedRows;
+
+        return dataRows
+            .map((row) => {
+                const [course, coreIdea, topicCode, topicName] = row;
+                return {
+                    course: (course || '').trim(),
+                    coreIdea: (coreIdea || '').trim(),
+                    topicCode: (topicCode || '').trim(),
+                    topicName: (topicName || '').trim()
+                };
+            })
+            .filter((item) => item.course && item.coreIdea && item.topicCode && item.topicName);
+    }
+
+    function buildTopicLookup(items) {
+        const byName = new Map();
+        const byCode = new Map();
+        const hierarchy = new Map();
+
+        items.forEach((item) => {
+            const normalized = normalizeText(item.topicName);
+            if (!byName.has(normalized)) {
+                byName.set(normalized, item);
+            }
+            byCode.set(item.topicCode, item);
+
+            if (!hierarchy.has(item.course)) {
+                hierarchy.set(item.course, {
+                    course: item.course,
+                    coreIdeas: new Map()
+                });
+            }
+
+            const courseEntry = hierarchy.get(item.course);
+            if (!courseEntry.coreIdeas.has(item.coreIdea)) {
+                courseEntry.coreIdeas.set(item.coreIdea, []);
+            }
+            courseEntry.coreIdeas.get(item.coreIdea).push(item);
+        });
+
+        return { byName, byCode, hierarchy };
+    }
+
+    function normalizeText(text) {
+        if (!text) {
+            return '';
+        }
+        return text
+            .toLowerCase()
+            .replace(/&/g, 'and')
+            .replace(/[’'`]/g, '')
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .replace(/\b(of|the|and|with|using|for|to|a|an|into|toward|towards|functions?)\b/g, ' ')
+            .replace(/\s+/g, '')
+            .trim();
+    }
+
+    function renderCalculusTree(hierarchy) {
+        const container = d3.select('#calculus-tree');
+        if (container.empty()) {
+            return;
+        }
+        
+        container.html('');
+
+        const courses = Array.from(hierarchy.values());
+
+        courses.forEach((courseEntry) => {
+            const courseGroup = container.append('div').attr('class', 'course-group');
+            const courseClass = courseEntry.course.toLowerCase().replace(/\s+/g, '-');
+            const courseHeader = courseGroup.append('div')
+                .attr('class', `tree-course ${courseClass}`);
+
+            const courseHeaderLeft = courseHeader.append('div').attr('class', 'tree-course-left');
+            const toggleIcon = courseHeaderLeft.append('span').attr('class', 'tree-toggle-icon').text('▸');
+            courseHeaderLeft.append('span').text(courseEntry.course);
+
+            const checkbox = courseHeader.append('input')
+                .attr('type', 'checkbox')
+                .attr('class', 'course-checkbox')
+                .property('checked', state.selectedCourses.has(courseEntry.course));
+
+            const coreContainer = courseGroup.append('div').attr('class', 'tree-children');
+
+            courseHeaderLeft.on('click', () => {
+                const isOpen = coreContainer.classed('open');
+                coreContainer.classed('open', !isOpen);
+                toggleIcon.text(isOpen ? '▸' : '▾');
+            });
+
+            const isCourseSelected = state.selectedCourses.has(courseEntry.course);
+
+            checkbox.on('change', (event) => {
+                if (event.target.checked) {
+                    state.selectedCourses.add(courseEntry.course);
+                } else {
+                    state.selectedCourses.delete(courseEntry.course);
+                }
+                updateCourseSummary();
+                applyCourseFilter();
+                updateNodeStyling();
+                updateCourseChildrenState(coreContainer, courseEntry.course);
+            });
+
+            const sortedCoreIdeas = Array.from(courseEntry.coreIdeas.entries());
+
+            sortedCoreIdeas.forEach(([coreIdea, topics]) => {
+                const coreGroup = coreContainer.append('div').attr('class', 'core-group');
+                const coreHeader = coreGroup.append('div')
+                    .attr('class', `tree-core ${!isCourseSelected ? 'disabled' : ''}`);
+
+                const coreLeft = coreHeader.append('div').attr('class', 'tree-core-left');
+                const coreToggle = coreLeft.append('span').attr('class', 'tree-toggle-icon').text('▸');
+                coreLeft.append('span').text(coreIdea);
+                const coreSummary = coreHeader.append('span').attr('class', 'core-summary').text(`${topics.length} topics`);
+
+                const topicContainer = coreGroup.append('div').attr('class', 'tree-children');
+
+                coreLeft.on('click', () => {
+                    if (!state.selectedCourses.has(courseEntry.course)) return;
+                    const isOpen = topicContainer.classed('open');
+                    topicContainer.classed('open', !isOpen);
+                    coreToggle.text(isOpen ? '▸' : '▾');
+                });
+
+                topics.forEach((topicMeta) => {
+                    const topicButton = topicContainer.append('button')
+                        .attr('type', 'button')
+                        .attr('class', `tree-topic ${!isCourseSelected ? 'disabled' : ''}`)
+                        .attr('data-topic-code', topicMeta.topicCode)
+                        .property('disabled', !isCourseSelected)
+                        .on('click', () => {
+                            if (!state.selectedCourses.has(courseEntry.course)) return;
+                            state.activeTopicCode = topicMeta.topicCode;
+                            updateActiveSidebarTopic(topicMeta.topicCode);
+                            const nodeId = state.nodeIdByTopicCode.get(topicMeta.topicCode);
+                            if (nodeId) {
+                                const nodeData = state.nodeById.get(nodeId);
+                                if (nodeData) {
+                                    selectCalculusNode(nodeData, { fromSidebar: true });
+                                }
+                            }
+                        });
+
+                    const labelWrapper = topicButton.append('div').attr('class', 'topic-label');
+                    labelWrapper.append('span').text(`${topicMeta.topicCode}. ${topicMeta.topicName}`);
+                    labelWrapper.append('small').text(coreIdea);
+                });
+            });
+        });
+    }
+
+    function updateCourseChildrenState(coreContainer, courseName) {
+        const isSelected = state.selectedCourses.has(courseName);
+        coreContainer.selectAll('.tree-core')
+            .classed('disabled', !isSelected);
+        coreContainer.selectAll('.tree-topic')
+            .classed('disabled', !isSelected)
+            .property('disabled', !isSelected);
+    }
+
+    function renderCSTopicTree(nodes) {
+        const container = d3.select('#cs-topic-tree');
+        if (container.empty()) {
+            return;
+        }
+        
+        container.html('');
+
+        const categoryMap = new Map();
+
+        nodes.forEach((node) => {
+            const rationales = node.rationales || {};
+            Object.entries(rationales).forEach(([category, items]) => {
+                if (!categoryMap.has(category)) {
+                    categoryMap.set(category, new Map());
+                }
+                const topicMap = categoryMap.get(category);
+                items.forEach((item) => {
+                    const topicName = (item.cs_topic || '').trim();
+                    if (!topicName) {
+                        return;
+                    }
+                    const existing = topicMap.get(topicName) || { topicName, count: 0 };
+                    existing.count += 1;
+                    topicMap.set(topicName, existing);
+                });
+            });
+        });
+        
+        const sortedCategories = Array.from(categoryMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+        sortedCategories.forEach(([category, topicMap]) => {
+            const categoryGroup = container.append('div').attr('class', 'cs-category-group');
+            const categoryHeader = categoryGroup.append('div').attr('class', 'cs-category-button');
+            const toggleIcon = categoryHeader.append('span').attr('class', 'tree-toggle-icon').text('▸');
+            categoryHeader.insert('span', ':first-child').text(category);
+
+            const topicsContainer = categoryGroup.append('div').attr('class', 'tree-children');
+
+            categoryHeader.on('click', () => {
+                const isOpen = topicsContainer.classed('open');
+                topicsContainer.classed('open', !isOpen);
+                toggleIcon.text(isOpen ? '▸' : '▾');
+            });
+
+            const topics = Array.from(topicMap.values()).sort((a, b) => a.topicName.localeCompare(b.topicName));
+
+            topics.forEach((topicEntry) => {
+                const topicButton = topicsContainer.append('button')
+                    .attr('type', 'button')
+                    .attr('class', 'cs-topic-button')
+                    .attr('data-category', category)
+                    .attr('data-topic', topicEntry.topicName)
+                    .text(topicEntry.topicName)
+                    .on('click', (event) => {
+            event.stopPropagation();
+                        toggleCSTopicSelection(category, topicEntry.topicName, topicButton);
+                    });
+            });
+        });
+    }
+
+    function toggleCSTopicSelection(category, topicName, buttonSelection) {
+        let topicsSet = state.selectedCSTopics.get(category);
+        if (!topicsSet) {
+            topicsSet = new Set();
+            state.selectedCSTopics.set(category, topicsSet);
+        }
+
+        if (topicsSet.has(topicName)) {
+            topicsSet.delete(topicName);
+            buttonSelection.classed('active', false);
+            if (topicsSet.size === 0) {
+                state.selectedCSTopics.delete(category);
+                }
+            } else {
+            topicsSet.add(topicName);
+            buttonSelection.classed('active', true);
+        }
+
+        updateCSHighlights();
+        updateNodeStyling();
+        if (state.selectedNodeId) {
+            const selectedNode = state.nodeById.get(state.selectedNodeId);
+            if (selectedNode) {
+                showRationale(selectedNode);
+            }
+        }
+    }
+
+    function clearSelectedCSTopics() {
+        state.selectedCSTopics.clear();
+        d3.selectAll('.cs-topic-button').classed('active', false);
+    }
+
+    function updateCSHighlights() {
+        state.csHighlightLevels.clear();
+
+        state.selectedCSTopics.forEach((topicsSet, category) => {
+            topicsSet.forEach((topic) => {
+                state.nodes.forEach((node) => {
+                    const level = getConnectionLevel(node, category, topic);
+                    if (level > 0) {
+                        const existing = state.csHighlightLevels.get(node.id) || 0;
+                        state.csHighlightLevels.set(node.id, Math.max(existing, level));
+                    }
+                });
+            });
+        });
+    }
+
+    function getConnectionLevel(node, category, topic) {
+        if (!node.rationales || !node.rationales[category]) {
+            return 0;
+        }
+        const entry = node.rationales[category].find((item) => (item.cs_topic || '').trim() === topic);
+        if (!entry) {
+            return 0;
+        }
+        return entry.connection_level || entry.connectionLevel || entry.connectionStrength || 1;
+    }
+
+    function updateCourseSummary() {
+        if (courseSummary.empty()) {
+            return;
+        }
+        if (state.selectedCourses.size === state.allCourses.length) {
+            courseSummary.text('All courses selected');
+        } else if (state.selectedCourses.size === 0) {
+            courseSummary.text('No courses selected');
+        } else {
+            courseSummary.text(`Selected: ${Array.from(state.selectedCourses).join(', ')}`);
+        }
+    }
+
+    function applyCourseFilter() {
+        state.nodes.forEach((node) => {
+            const courseName = node.course || node.calc_level;
+            node.isCourseVisible = state.selectedCourses.size === 0 || state.selectedCourses.has(courseName);
+        });
+    }
+
+    function updateNodeStyling() {
+        if (!state.nodeSelection) {
+            return;
+        }
+        
+        state.nodeSelection
+            .classed('selected', (d) => d.id === state.selectedNodeId)
+            .classed('incoming', (d) => state.incomingNodeIds.has(d.id))
+            .classed('outgoing', (d) => state.outgoingNodeIds.has(d.id) && d.id !== state.selectedNodeId)
+            .classed('cs-highlight', (d) => state.csHighlightLevels.has(d.id))
+            .classed('course-hidden', (d) => !d.isCourseVisible)
+            .classed('faded', (d) => shouldFadeNode(d));
+
+        state.circleSelection.attr('r', (d) => computeNodeRadius(d));
+
+        if (state.linkSelection) {
+            state.linkSelection
+                .classed('incoming-link', (link) => link.target.id === state.selectedNodeId)
+                .classed('outgoing-link', (link) => link.source.id === state.selectedNodeId)
+                .classed('course-hidden', (link) => !isCourseVisibleRef(link.source) || !isCourseVisibleRef(link.target))
+                .classed('faded', (link) => shouldFadeLink(link));
+        }
+
+        if (state.simulation) {
+            state.simulation.force('collision').radius((d) => computeNodeRadius(d) + 12);
+        }
+    }
+
+    function shouldFadeNode(node) {
+        if (!node.isCourseVisible) {
+            return false;
+        }
+        const hasSelectedNode = Boolean(state.selectedNodeId);
+        const hasHighlight = state.csHighlightLevels.size > 0;
+        const isSelected = node.id === state.selectedNodeId;
+        const isIncoming = state.incomingNodeIds.has(node.id);
+        const isOutgoing = state.outgoingNodeIds.has(node.id);
+        const isCSHighlighted = state.csHighlightLevels.has(node.id);
+
+        const fadeForCalc = hasSelectedNode && !isSelected && !isIncoming && !isOutgoing;
+        const fadeForCS = hasHighlight && !isCSHighlighted && !isSelected && !isIncoming;
+        return (fadeForCalc || fadeForCS) && !isOutgoing;
+    }
+
+    function shouldFadeLink(link) {
+        if (!isCourseVisibleRef(link.source) || !isCourseVisibleRef(link.target)) {
+            return false;
+        }
+        if (state.selectedNodeId) {
+            const sourceNode = resolveNodeRef(link.source);
+            const targetNode = resolveNodeRef(link.target);
+            if (!sourceNode || !targetNode) {
+                return false;
+            }
+            return sourceNode.id !== state.selectedNodeId && targetNode.id !== state.selectedNodeId;
+        }
+        return false;
+    }
+
+    function computeNodeRadius(node) {
+        const baseRadius = 11;
+        let radius = baseRadius;
+
+        if (state.selectedCourses.size === state.allCourses.length && state.allCourses.length > 0) {
+            const scaleMin = 10;
+            const scaleMax = 20;
+            const degreeRatio = state.maxDegree > 0 ? node.degree / state.maxDegree : 0;
+            radius = scaleMin + degreeRatio * (scaleMax - scaleMin);
+        }
+
+        const csHighlightLevel = state.csHighlightLevels.get(node.id) || 0;
+        if (csHighlightLevel >= 2) {
+            radius += 4;
+        } else if (csHighlightLevel === 1) {
+            radius += 2;
+        }
+
+        if (node.id === state.selectedNodeId) {
+            radius += 1.5;
+        }
+
+        return radius;
+    }
+
+    function selectCalculusNode(nodeData, options = {}) {
+        state.selectedNodeId = nodeData.id;
+        state.incomingNodeIds = getConnectedNodes(nodeData.id, 'incoming');
+        state.outgoingNodeIds = getConnectedNodes(nodeData.id, 'outgoing');
+        state.activeTopicCode = nodeData.topicCode || null;
+
+        updateActiveSidebarTopic(state.activeTopicCode);
+        updateNodeStyling();
+        showRationale(nodeData);
+
+        const focusNodes = [nodeData.id, ...Array.from(state.incomingNodeIds)];
+        focusOnNodes(focusNodes, { animate: !options.fromSidebar });
+    }
+
+    function resetCalculusSelection({ shouldRefit = false } = {}) {
+        state.selectedNodeId = null;
+        state.incomingNodeIds.clear();
+        state.outgoingNodeIds.clear();
+        state.activeTopicCode = null;
+        updateActiveSidebarTopic(null);
+        updateNodeStyling();
+        rationaleDisplay.classed('hidden', true);
+        emptyState.classed('hidden', false);
+
+        if (shouldRefit) {
+            fitGraphToView({ animate: true });
+        }
+    }
+
+    function getConnectedNodes(nodeId, direction) {
+        const result = new Set();
+        state.edges.forEach((edge) => {
+            const sourceNode = resolveNodeRef(edge.source);
+            const targetNode = resolveNodeRef(edge.target);
+            if (!sourceNode || !targetNode) {
+                return;
+            }
+
+            if (direction === 'incoming' && targetNode.id === nodeId) {
+                result.add(sourceNode.id);
+            }
+            if (direction === 'outgoing' && sourceNode.id === nodeId) {
+                result.add(targetNode.id);
+            }
+        });
+        return result;
+    }
+
+    function resolveNodeRef(ref) {
+        if (ref && typeof ref === 'object') {
+            return ref;
+        }
+        return state.nodeById.get(ref);
+    }
+
+    function isCourseVisibleRef(ref) {
+        const node = resolveNodeRef(ref);
+        return node ? node.isCourseVisible : true;
+    }
+
+    function showRationale(nodeData) {
+        if (!nodeData) {
+            rationaleDisplay.classed('hidden', true);
+            emptyState.classed('hidden', false);
+            return;
+        }
+        
+        rationaleTitle.text(`${nodeData.topicCode || nodeData.number_id || ''} ${nodeData.topicName || nodeData.label}`.trim());
+        rationaleLevel.text(`${nodeData.course || nodeData.calc_level || ''}${nodeData.coreIdea ? ` · ${nodeData.coreIdea}` : ''}`);
+
+        const selectedFilters = getSelectedCSTopicFilters();
+        const rationales = nodeData.rationales || {};
+        rationaleContent.html('');
+
+        if (selectedFilters.length === 0) {
+            Object.entries(rationales).forEach(([category, items]) => {
+                appendRationaleCategory(category, items);
+            });
+                } else {
+            let added = false;
+            selectedFilters.forEach(({ category, topic }) => {
+                const items = (rationales[category] || []).filter((entry) => (entry.cs_topic || '').trim() === topic);
+                if (items.length > 0) {
+                    appendRationaleCategory(category, items, topic);
+                    added = true;
+                }
+            });
+
+            if (!added) {
+                rationaleContent.append('p')
+                    .attr('class', 'no-rationale-message')
+                    .text('No rationales match the currently selected CS topics.');
+            }
+        }
+
+        rationaleDisplay.classed('hidden', false);
+        emptyState.classed('hidden', true);
+    }
+
+    function appendRationaleCategory(category, items, topicFilter) {
+        const header = rationaleContent.append('h5').text(category);
+        if (topicFilter) {
+            header.append('span').text(` · ${topicFilter}`);
+        }
+        items.forEach((item) => {
+            const block = rationaleContent.append('div').attr('class', 'rationale-item');
+            block.html(`<strong>${item.cs_topic || ''}:</strong> ${item.rationale || ''}`);
+        });
+    }
+
+    function getSelectedCSTopicFilters() {
+        const filters = [];
+        state.selectedCSTopics.forEach((topicsSet, category) => {
+            topicsSet.forEach((topic) => {
+                filters.push({ category, topic });
+            });
+        });
+        return filters;
+    }
+
+    function updateActiveSidebarTopic(topicCode) {
+        d3.selectAll('.tree-topic').classed('active', function () {
+            const code = d3.select(this).attr('data-topic-code');
+            return topicCode && code === topicCode;
+        });
+    }
+
+    function focusOnNodes(nodeIds, { animate = true } = {}) {
+        if (!nodeIds || nodeIds.length === 0) {
+            return;
+        }
+        const nodesToFocus = state.nodes.filter((node) => nodeIds.includes(node.id));
+        if (nodesToFocus.length === 0) {
+            return;
+        }
+
+        const minX = d3.min(nodesToFocus, (node) => node.x);
+        const maxX = d3.max(nodesToFocus, (node) => node.x);
+        const minY = d3.min(nodesToFocus, (node) => node.y);
+        const maxY = d3.max(nodesToFocus, (node) => node.y);
+
+        const padding = 120;
+        const boundsWidth = Math.max(maxX - minX, 1);
+        const boundsHeight = Math.max(maxY - minY, 1);
+
+        const scale = Math.min(state.width / (boundsWidth + padding), state.height / (boundsHeight + padding));
+        const clampedScale = Math.max(Math.min(scale, 3.2), 0.6);
+
+        const translateX = state.width / 2 - ((minX + maxX) / 2) * clampedScale;
+        const translateY = state.height / 2 - ((minY + maxY) / 2) * clampedScale;
+
+        const transform = d3.zoomIdentity.translate(translateX, translateY).scale(clampedScale);
+
+        if (animate) {
+            svg.transition().duration(650).call(state.zoom.transform, transform);
+        } else {
+            svg.call(state.zoom.transform, transform);
+        }
+    }
+
+    function fitGraphToView({ animate = false } = {}) {
+        if (!state.nodes || state.nodes.length === 0) {
+            return;
+        }
+        const minX = d3.min(state.nodes, (node) => node.x);
+        const maxX = d3.max(state.nodes, (node) => node.x);
+        const minY = d3.min(state.nodes, (node) => node.y);
+        const maxY = d3.max(state.nodes, (node) => node.y);
+
+        const padding = 200;
+        const boundsWidth = Math.max(maxX - minX, 1);
+        const boundsHeight = Math.max(maxY - minY, 1);
+
+        const scale = Math.min(state.width / (boundsWidth + padding), state.height / (boundsHeight + padding));
+        const clampedScale = Math.max(Math.min(scale, 2.5), 0.5);
+
+        const translateX = state.width / 2 - ((minX + maxX) / 2) * clampedScale;
+        const translateY = state.height / 2 - ((minY + maxY) / 2) * clampedScale;
+
+        const transform = d3.zoomIdentity.translate(translateX, translateY).scale(clampedScale);
+
+        if (animate) {
+            svg.transition().duration(750).call(state.zoom.transform, transform);
+        } else {
+            svg.call(state.zoom.transform, transform);
+        }
+    }
+
+    function handleResize() {
+        const newRect = container.node().getBoundingClientRect();
+        state.width = newRect.width;
+        state.height = newRect.height;
+        svg.attr('width', state.width).attr('height', state.height);
+        if (state.simulation) {
+            state.simulation.force('center', d3.forceCenter(state.width / 2, state.height / 2));
+            state.simulation.alpha(0.2).restart();
+        }
+        if (state.initialFitDone) {
+            fitGraphToView({ animate: true });
+        }
+    }
 });
