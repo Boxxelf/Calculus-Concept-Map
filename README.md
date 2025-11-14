@@ -1,97 +1,208 @@
-# Gates Visual - Calculus Concept Map
+# Calculus Concept Map
 
-An interactive visualization of calculus topics and their applications in Computer Science.
+An interactive, web-based visualization tool that maps the relationships between calculus topics and their applications in computer science. This project helps students and educators understand how fundamental calculus concepts connect to modern CS fields like machine learning, algorithms, artificial intelligence, and computer graphics.
 
-## Live Demo
+## 🌐 Live Demo
 
-**https://boxxelf.github.io/gates-visual-v4/**
+**[View the interactive visualization →](https://boxxelf.github.io/Calculus-Concept-Map/)**
 
 ## ✨ Features
 
-- Interactive force-directed graph with drag-and-drop
-- Filter by CS category or Calculus level
-- Click nodes to view detailed CS applications
-- Hierarchical course structure (Course → Core Idea → Topic)
-- Course selection with disabled state for unselected courses
-- Color-coded courses (Calculus I: Blue, Calculus II: Green)
-- Smart zooming and auto-focus on selected nodes
-- Node size scaling based on connection count when all courses are selected
+### Interactive Visualization
+- **Force-directed graph** with drag-and-drop node manipulation
+- **Smart zooming** that automatically focuses on selected nodes
+- **Dynamic node sizing** based on connection count when all courses are selected
+- **Color-coded courses**: Calculus I (Blue) and Calculus II (Green)
 
-## 🚀 Local Setup
+### Hierarchical Course Structure
+- **Three-level hierarchy**: Course → Core Idea → Topic
+- **Expandable sidebar** for easy navigation
+- **Topic codes** (e.g., Lim1, Der2, Int3) matching node labels in the visualization
+- **Course selection** with disabled state for unselected courses
 
-```bash
-git clone https://github.com/Boxxelf/gates-visual-v4.git
-cd gates-visual-v4
-python3 -m http.server 8000
-```
+### Advanced Filtering & Interaction
+- **CS topic filtering**: Select CS topics to highlight related calculus nodes
+- **Connection strength visualization**: Red glow for strong connections (level 2), regular highlight for level 1
+- **Prerequisite highlighting**: When clicking a calculus node, incoming prerequisite nodes are highlighted while outgoing nodes fade
+- **Filtered rationales**: View only rationales matching selected CS topics
 
-Open http://localhost:8000 in your browser.
+### User Experience
+- **Instructions overlay** on first visit with easy reopen option
+- **Responsive design** that adapts to different screen sizes
+- **Smooth animations** and transitions throughout
+- **Empty state guidance** when no nodes are selected
+
+## 🚀 Getting Started
+
+### Prerequisites
+- A modern web browser (Chrome, Firefox, Safari, or Edge)
+- Python 3.x (for local development)
+
+### Local Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Boxxelf/Calculus-Concept-Map.git
+   cd Calculus-Concept-Map
+   ```
+
+2. **Start a local server**
+   ```bash
+   python3 -m http.server 8000
+   ```
+
+3. **Open in browser**
+   Navigate to `http://localhost:8000` in your web browser
 
 ## 💡 How to Use
 
-1. **Select CS Topics**: Click topics in the left sidebar to highlight related calculus nodes
-2. **Browse Course Hierarchy**: Expand courses and core ideas to locate specific topics
-3. **View Details**: Click any calculus node to view filtered rationales matching selected CS topics
-4. **Course Selection**: Toggle course checkboxes to enable/disable course topics
-5. **Navigate**: Drag nodes to rearrange, use mouse wheel to zoom, click background to reset
+### Basic Navigation
+1. **Explore the map**: The full graph is visible on load. Use mouse wheel to zoom, drag to pan
+2. **Hover over nodes**: See full topic names in tooltips
+3. **Click nodes**: View detailed rationales and highlight connections
+4. **Drag nodes**: Rearrange the layout to your preference
+5. **Click background**: Reset the view and clear selections
 
-## Project Structure
+### Selecting CS Topics
+1. Expand **CS Topics** in the left sidebar
+2. Click on any CS topic (e.g., "Gradient descent", "Neural networks")
+3. Related calculus nodes will be highlighted with a red glow
+4. Nodes with stronger connections (level 2) appear slightly larger
+
+### Browsing Calculus Topics
+1. Expand **Calculus Courses** in the left sidebar
+2. Click on a course (Calculus I or Calculus II) to expand core ideas
+3. Click on a core idea to see individual topics
+4. Click any topic to highlight it in the visualization and view its details
+
+### Viewing Details
+1. Select CS topics to filter (optional)
+2. Click a calculus node in the visualization or sidebar
+3. View filtered rationales in the right panel
+4. See incoming prerequisite nodes highlighted and outgoing nodes faded
+
+### Course Selection
+- Toggle course checkboxes to enable/disable entire courses
+- When a course is unchecked, all its topics become disabled and grayed out
+- This helps focus on specific course content
+
+## 📁 Project Structure
 
 ```
-gates_visual_v5/
-├── index.html          # Main HTML page
+Calculus-Concept-Map/
+├── index.html          # Main HTML structure
 ├── style.css           # Styling and layout
-├── app.js              # JavaScript logic and D3.js visualization
-├── graph_data.json     # Calculus topics data with relationships
-├── Calculus topic labeling scheme.csv  # Topic codes and hierarchy
+├── app.js              # Core visualization logic (D3.js)
+├── graph_data.json     # Calculus topics with relationships and CS applications
+├── Calculus topic labeling scheme.csv  # Topic codes and hierarchical structure
 ├── ML_Alg_AI_CG_Rationales_081525(Rationales).csv  # CS topic rationales
 └── README.md           # This file
 ```
 
-## Data Structure
+## 📊 Data Structure
 
-The `graph_data.json` file contains:
-
-- **Nodes**: Each calculus topic with:
-  - `id`: Short identifier
+### Graph Data (`graph_data.json`)
+- **Nodes**: Each calculus topic contains:
+  - `id`: Unique identifier
   - `topicCode`: Codified label (e.g., "Lim1", "Der2")
   - `label`: Full topic name
   - `calc_level`: "Calculus I" or "Calculus II"
   - `cs_categories`: Array of relevant CS fields
-  - `rationales`: Detailed explanations of CS applications
+  - `rationales`: Detailed explanations organized by CS category and topic
 
-- **Edges**: Prerequisites/follow-up relationships between topics
+- **Edges**: Directed relationships representing prerequisites
+  - `source`: Prerequisite topic ID
+  - `target`: Dependent topic ID
 
-## Customization
+### Topic Labeling Scheme (`Calculus topic labeling scheme.csv`)
+- Defines the hierarchical structure: Course → Core Idea → Topic Code → Topic Name
+- Used to generate the sidebar navigation and map topic codes to nodes
+
+## 🛠️ Technology Stack
+
+- **D3.js v7**: Force-directed graph visualization
+- **Vanilla JavaScript**: No framework dependencies
+- **CSS3**: Modern styling with gradients and animations
+- **Python HTTP Server**: Simple local development server
+
+## 🎨 Customization
 
 ### Adding New Topics
 
-Edit `graph_data.json` and `Calculus topic labeling scheme.csv`:
+1. **Update the CSV file**: Add entries to `Calculus topic labeling scheme.csv`
+   ```csv
+   Course,Core Idea,Topic Code,Topic Name
+   Calculus I,Derivatives,Der19,New Topic Name
+   ```
 
-1. Add topic to CSV with Course, Core Idea, Topic Code, and Topic Name
-2. Add corresponding node to `graph_data.json`
-3. Add edges to establish relationships
+2. **Update graph data**: Add corresponding node to `graph_data.json`
+   ```json
+   {
+     "id": "NEW_ID",
+     "topicCode": "Der19",
+     "label": "New Topic Name",
+     "calc_level": "Calculus I",
+     "cs_categories": ["Machine Learning"],
+     "rationales": {
+       "Machine Learning": [
+         {
+           "cs_topic": "Application Name",
+           "rationale": "Why this matters..."
+         }
+       ]
+     }
+   }
+   ```
+
+3. **Add relationships**: Create edges in `graph_data.json`
+   ```json
+   {
+     "source": "PREREQUISITE_ID",
+     "target": "NEW_ID"
+   }
+   ```
 
 ### Styling
 
-Modify `style.css` to change colors, fonts, or layout.
+Modify `style.css` to customize:
+- Color schemes for courses
+- Node sizes and styles
+- Layout and spacing
+- Typography
 
-## License
+## 🤝 Contributing
 
-This project is open source and available for educational purposes.
+Contributions are welcome! Areas where help is needed:
 
-## Contributing
+- **Content**: Add more calculus topics or CS applications
+- **Visualization**: Enhance graph algorithms or interactions
+- **UI/UX**: Improve user experience and accessibility
+- **Documentation**: Expand guides and examples
+- **Bug fixes**: Report and fix issues
 
-Contributions are welcome! Feel free to:
-- Add more calculus topics
-- Enhance the visualizations
-- Improve the UI/UX
-- Fix bugs
+### Contribution Guidelines
 
-## Contact
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-For questions or suggestions, please open an issue on GitHub.
+## 📝 License
+
+This project is open source and available for educational purposes. Feel free to use, modify, and distribute for educational and research purposes.
+
+## 🙏 Acknowledgments
+
+- Built with [D3.js](https://d3js.org/)
+- Designed for computer science students learning calculus
+- Inspired by the need to visualize prerequisite relationships in mathematics education
+
+## 📧 Contact & Support
+
+- **Issues**: [GitHub Issues](https://github.com/Boxxelf/Calculus-Concept-Map/issues)
+- **Questions**: Open an issue or discussion on GitHub
 
 ---
 
-Made with D3.js for Computer Science students learning Calculus
+**Made with ❤️ for students learning the connections between Calculus and Computer Science**
