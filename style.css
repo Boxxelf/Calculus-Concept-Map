@@ -125,6 +125,56 @@ h1 {
     gap: 6px;
 }
 
+/* CS Category Header - More prominent */
+.cs-category-button {
+    font-size: 1.05rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    padding: 12px 14px;
+    color: #212529;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cs-category-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.cs-category-button:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    border-color: #adb5bd;
+}
+
+.cs-select-all-checkbox {
+    margin-left: auto;
+    cursor: pointer;
+    accent-color: #2563eb;
+    width: 18px;
+    height: 18px;
+}
+
+/* CS Subtopics - More subdued */
+.cs-topic-button {
+    font-size: 0.85rem;
+    font-weight: 400;
+    margin-left: 20px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+    color: #495057;
+}
+
+.cs-topic-button:hover {
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+    color: #212529;
+}
+
 .tree-course,
 .tree-core,
 .tree-topic,

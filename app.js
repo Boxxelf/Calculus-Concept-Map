@@ -57,19 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const arrowMarker = defs.append('marker')
         .attr('id', 'arrowhead')
-        .attr('viewBox', '0 0 10 10')
-        .attr('refX', 18)
-        .attr('refY', 5)
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
+        .attr('viewBox', '0 0 15 15')
+        .attr('refX', 20)
+        .attr('refY', 7.5)
+        .attr('markerWidth', 12)
+        .attr('markerHeight', 12)
         .attr('orient', 'auto')
         .attr('markerUnits', 'userSpaceOnUse');
 
     arrowMarker.append('path')
-        .attr('d', 'M0,0 L10,5 L0,10 L2,5 Z')
+        .attr('d', 'M0,0 L15,7.5 L0,15 L3,7.5 Z')
         .attr('fill', '#64748b')
         .attr('stroke', '#475569')
-        .attr('stroke-width', '0.5')
+        .attr('stroke-width', '0.8')
         .attr('opacity', 0.7);
 
     const zoomLayer = svg.append('g').attr('class', 'zoom-layer');
@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.allCourses = Array.from(topicLookup.hierarchy.keys());
 
         initializeGraph(graph);
+        ensureAllTopicsInGraph(calculusItems);
         renderCalculusTree(state.calculusHierarchy);
         renderCSTopicTree(state.nodes);
         updateCourseSummary();
@@ -149,13 +150,108 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('resize', handleResize);
 
+    function ensureAllTopicsInGraph(calculusItems) {
+        const existingTopicCodes = new Set();
+        state.nodes.forEach((node) => {
+            if (node.topicCode) {
+                existingTopicCodes.add(node.topicCode);
+            }
+        });
+
+        const missingTopics = calculusItems.filter((item) => {
+            return !existingTopicCodes.has(item.topicCode);
+        });
+
+        if (missingTopics.length > 0) {
+            console.log(`Adding ${missingTopics.length} missing topics to the graph:`, missingTopics.map(t => t.topicCode));
+            
+            missingTopics.forEach((topicMeta, index) => {
+                const newNode = {
+                    id: `MISSING_${topicMeta.topicCode}`,
+                    number_id: null,
+                    label: topicMeta.topicName,
+                    topicCode: topicMeta.topicCode,
+                    topicName: topicMeta.topicName,
+                    course: topicMeta.course,
+                    calc_level: topicMeta.course,
+                    coreIdea: topicMeta.coreIdea,
+                    cs_categories: [],
+                    rationales: {},
+                    isCourseVisible: true,
+                    degree: 0,
+                    x: (state.width / 2) + (Math.random() - 0.5) * 200,
+                    y: (state.height / 2) + (Math.random() - 0.5) * 200
+                };
+                
+                state.nodes.push(newNode);
+                state.nodeById.set(newNode.id, newNode);
+                state.nodeIdByTopicCode.set(topicMeta.topicCode, newNode.id);
+            });
+
+            // Re-initialize the graph visualization with new nodes
+            if (state.nodeSelection) {
+                const newNodes = state.nodes.filter((n) => n.id.startsWith('MISSING_'));
+                if (newNodes.length > 0) {
+                    const newSelection = state.nodeLayer.selectAll('g.node')
+                        .data(state.nodes, (d) => d.id);
+                    
+                    const enterSelection = newSelection.enter()
+                        .append('g')
+                        .attr('class', 'node')
+                        .call(dragBehaviour());
+                    
+                    enterSelection.append('circle')
+                        .attr('class', (d) => {
+                            const level = (d.course || d.calc_level || '').replace(/\s+/g, '-').toLowerCase();
+                            if (level === 'calculus-i') {
+                                return 'node-circle calc-i';
+                            }
+                            if (level === 'calculus-ii') {
+                                return 'node-circle calc-ii';
+                            }
+                            return 'node-circle';
+                        })
+                        .attr('r', (d) => computeNodeRadius(d));
+                    
+                    enterSelection.append('text')
+                        .attr('class', 'node-label')
+                        .attr('x', 12)
+                        .attr('y', 4)
+                        .text((d) => d.topicCode || d.number_id || d.id);
+                    
+                    enterSelection
+                        .on('mouseover', (event, nodeData) => {
+                            tooltip.transition().duration(80).style('opacity', 0.95);
+                            tooltip.html(`<strong>${nodeData.topicName || nodeData.label}</strong>`)
+                                .style('left', `${event.pageX + 12}px`)
+                                .style('top', `${event.pageY - 28}px`);
+                        })
+                        .on('mouseout', () => {
+                            tooltip.transition().duration(200).style('opacity', 0);
+                        })
+                        .on('click', (event, nodeData) => {
+                            event.stopPropagation();
+                            selectCalculusNode(nodeData);
+                        });
+                    
+                    state.nodeSelection = state.nodeLayer.selectAll('g.node');
+                    state.circleSelection = state.nodeSelection.selectAll('circle');
+                    
+                    if (state.simulation) {
+                        state.simulation.nodes(state.nodes);
+                        state.simulation.alpha(0.3).restart();
+                    }
+                }
+            }
+        }
+    }
+
     function initializeGraph(graph) {
         state.nodes = graph.nodes.map((node) => ({ ...node }));
         state.edges = graph.edges.map((edge) => ({ ...edge }));
 
         state.nodes.forEach((node) => {
-            const normalizedLabel = normalizeText(node.label);
-        const lookupMatch = state.topicLookupByName.get(normalizedLabel);
+            const lookupMatch = findTopicMatch(node.label, state.topicLookupByName);
 
             if (lookupMatch) {
                 node.topicCode = lookupMatch.topicCode;
@@ -355,6 +451,36 @@ document.addEventListener('DOMContentLoaded', () => {
             .trim();
     }
 
+    // Special matching rules for topics with slight name variations
+    function findTopicMatch(nodeLabel, topicLookup) {
+        const normalized = normalizeText(nodeLabel);
+        let match = topicLookup.get(normalized);
+        
+        if (match) {
+            return match;
+        }
+        
+        // Special cases for known variations
+        const specialCases = {
+            "lhopitalsrule": "L'Hôpital's rule (using derivatives to evaluate limits of indeterminate form)",
+            "lhopitalrule": "L'Hôpital's rule (using derivatives to evaluate limits of indeterminate form)",
+            "antiderivatives": "Antiderivatives (the reverse process of differentiation)",
+            "hyperbolicfunctions": "Hyperbolic functions (derivatives and integrals)",
+            "linearapproximation": "Linear approximations"
+        };
+        
+        const specialMatch = specialCases[normalized];
+        if (specialMatch) {
+            const specialNormalized = normalizeText(specialMatch);
+            match = topicLookup.get(specialNormalized);
+            if (match) {
+                return match;
+            }
+        }
+        
+        return null;
+    }
+
     function renderCalculusTree(hierarchy) {
         const container = d3.select('#calculus-tree');
         if (container.empty()) {
@@ -493,18 +619,27 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedCategories.forEach(([category, topicMap]) => {
             const categoryGroup = container.append('div').attr('class', 'cs-category-group');
             const categoryHeader = categoryGroup.append('div').attr('class', 'cs-category-button');
-            const toggleIcon = categoryHeader.append('span').attr('class', 'tree-toggle-icon').text('▸');
-            categoryHeader.insert('span', ':first-child').text(category);
+            
+            const categoryLeft = categoryHeader.append('div').attr('class', 'cs-category-left');
+            const toggleIcon = categoryLeft.append('span').attr('class', 'tree-toggle-icon').text('▸');
+            categoryLeft.append('span').text(category);
+            
+            const selectAllCheckbox = categoryHeader.append('input')
+                .attr('type', 'checkbox')
+                .attr('class', 'cs-select-all-checkbox')
+                .attr('data-category', category)
+                .property('indeterminate', false);
 
             const topicsContainer = categoryGroup.append('div').attr('class', 'tree-children');
 
-            categoryHeader.on('click', () => {
+            categoryLeft.on('click', () => {
                 const isOpen = topicsContainer.classed('open');
                 topicsContainer.classed('open', !isOpen);
                 toggleIcon.text(isOpen ? '▸' : '▾');
             });
 
             const topics = Array.from(topicMap.values()).sort((a, b) => a.topicName.localeCompare(b.topicName));
+            const topicButtons = [];
 
             topics.forEach((topicEntry) => {
                 const topicButton = topicsContainer.append('button')
@@ -514,9 +649,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     .attr('data-topic', topicEntry.topicName)
                     .text(topicEntry.topicName)
                     .on('click', (event) => {
-            event.stopPropagation();
+                        event.stopPropagation();
                         toggleCSTopicSelection(category, topicEntry.topicName, topicButton);
+                        updateSelectAllCheckbox(category, categoryGroup);
                     });
+                topicButtons.push(topicButton);
+            });
+
+            // Select all checkbox handler
+            selectAllCheckbox.on('change', function(event) {
+                event.stopPropagation();
+                const isChecked = event.target.checked;
+                const topicsSet = state.selectedCSTopics.get(category) || new Set();
+                
+                topics.forEach((topicEntry) => {
+                    const topicKey = category + ':' + topicEntry.topicName;
+                    if (isChecked) {
+                        topicsSet.add(topicEntry.topicName);
+                        const btn = topicsContainer.select(`.cs-topic-button[data-topic="${topicEntry.topicName}"]`);
+                        btn.classed('active', true);
+                    } else {
+                        topicsSet.delete(topicEntry.topicName);
+                        const btn = topicsContainer.select(`.cs-topic-button[data-topic="${topicEntry.topicName}"]`);
+                        btn.classed('active', false);
+                    }
+                });
+                
+                if (topicsSet.size > 0) {
+                    state.selectedCSTopics.set(category, topicsSet);
+                } else {
+                    state.selectedCSTopics.delete(category);
+                }
+                
+                updateCSHighlights();
+                updateNodeStyling();
+                if (state.selectedNodeId) {
+                    const selectedNode = state.nodeById.get(state.selectedNodeId);
+                    if (selectedNode) {
+                        showRationale(selectedNode);
+                    }
+                }
             });
         });
     }
@@ -533,10 +705,16 @@ document.addEventListener('DOMContentLoaded', () => {
             buttonSelection.classed('active', false);
             if (topicsSet.size === 0) {
                 state.selectedCSTopics.delete(category);
-                }
-            } else {
+            }
+        } else {
             topicsSet.add(topicName);
             buttonSelection.classed('active', true);
+        }
+
+        // Update select all checkbox state
+        const categoryGroup = buttonSelection.node().closest('.cs-category-group');
+        if (categoryGroup) {
+            updateSelectAllCheckbox(category, d3.select(categoryGroup));
         }
 
         updateCSHighlights();
@@ -549,9 +727,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function updateSelectAllCheckbox(category, categoryGroup) {
+        const checkbox = categoryGroup.select('.cs-select-all-checkbox');
+        if (checkbox.empty()) return;
+        
+        const topicsSet = state.selectedCSTopics.get(category);
+        const allTopics = categoryGroup.selectAll('.cs-topic-button').nodes();
+        const selectedCount = topicsSet ? topicsSet.size : 0;
+        const totalCount = allTopics.length;
+        
+        if (selectedCount === 0) {
+            checkbox.property('checked', false);
+            checkbox.property('indeterminate', false);
+        } else if (selectedCount === totalCount) {
+            checkbox.property('checked', true);
+            checkbox.property('indeterminate', false);
+        } else {
+            checkbox.property('checked', false);
+            checkbox.property('indeterminate', true);
+        }
+    }
+
     function clearSelectedCSTopics() {
         state.selectedCSTopics.clear();
         d3.selectAll('.cs-topic-button').classed('active', false);
+        d3.selectAll('.cs-select-all-checkbox').property('checked', false).property('indeterminate', false);
     }
 
     function updateCSHighlights() {
