@@ -2,11 +2,22 @@
 
 An interactive, web-based visualization tool that maps the relationships between calculus topics and their applications in computer science. This project helps students and educators understand how fundamental calculus concepts connect to modern CS fields like machine learning, algorithms, artificial intelligence, and computer graphics.
 
-## 🌐 Live Demo
+## Live Demo
 
 **[View the interactive visualization →](https://boxxelf.github.io/Calculus-Concept-Map/)**
 
-## ✨ Features
+## Recent Updates
+
+**December 2024:**
+- Added 33 missing Calculus II topics, including all 5 differential equations topics (AW, AX, AY, AZ, BA)
+- Added all missing connections between calculus topics (33 new edges)
+- Fixed topic code mappings for nodes Z (Der15), AD (Int4), and AH (Int10)
+- Enhanced special mapping function to handle duplicate number_id cases
+- Total nodes: 65 (previously 32), Total connections: 94 (previously 61)
+
+See [UPDATE_NOTES1201.md](UPDATE_NOTES1201.md) for detailed information about the fixes and improvements.
+
+## Features
 
 ### Interactive Visualization
 - **Force-directed graph** with drag-and-drop node manipulation
@@ -32,7 +43,7 @@ An interactive, web-based visualization tool that maps the relationships between
 - **Smooth animations** and transitions throughout
 - **Empty state guidance** when no nodes are selected
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - A modern web browser (Chrome, Firefox, Safari, or Edge)
@@ -54,7 +65,7 @@ An interactive, web-based visualization tool that maps the relationships between
 3. **Open in browser**
    Navigate to `http://localhost:8000` in your web browser
 
-## 💡 How to Use
+## How to Use
 
 ### Basic Navigation
 1. **Explore the map**: The full graph is visible on load. Use mouse wheel to zoom, drag to pan
@@ -86,7 +97,7 @@ An interactive, web-based visualization tool that maps the relationships between
 - When a course is unchecked, all its topics become disabled and grayed out
 - This helps focus on specific course content
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Calculus-Concept-Map/
@@ -96,10 +107,12 @@ Calculus-Concept-Map/
 ├── graph_data.json     # Calculus topics with relationships and CS applications
 ├── Calculus topic labeling scheme.csv  # Topic codes and hierarchical structure
 ├── ML_Alg_AI_CG_Rationales_081525(Rationales).csv  # CS topic rationales
+├── UPDATE_NOTES1201.md # Detailed update notes and fixes
+├── DEPLOYMENT.md       # Deployment guide
 └── README.md           # This file
 ```
 
-## 📊 Data Structure
+## Data Structure
 
 ### Graph Data (`graph_data.json`)
 - **Nodes**: Each calculus topic contains:
@@ -118,14 +131,14 @@ Calculus-Concept-Map/
 - Defines the hierarchical structure: Course → Core Idea → Topic Code → Topic Name
 - Used to generate the sidebar navigation and map topic codes to nodes
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **D3.js v7**: Force-directed graph visualization
 - **Vanilla JavaScript**: No framework dependencies
 - **CSS3**: Modern styling with gradients and animations
 - **Python HTTP Server**: Simple local development server
 
-## 🎨 Customization
+## Customization
 
 ### Adding New Topics
 
@@ -170,7 +183,7 @@ Modify `style.css` to customize:
 - Layout and spacing
 - Typography
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Areas where help is needed:
 
@@ -188,21 +201,21 @@ Contributions are welcome! Areas where help is needed:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
-This project is open source and available for educational purposes. Feel free to use, modify, and distribute for educational and research purposes.
+This project is open source and available for educational purposes. Free to use, modify, and distribute for educational and research purposes.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [D3.js](https://d3js.org/)
 - Designed for computer science students learning calculus
 - Inspired by the need to visualize prerequisite relationships in mathematics education
 
-## 📧 Contact & Support
+## Contact & Support
 
 - **Issues**: [GitHub Issues](https://github.com/Boxxelf/Calculus-Concept-Map/issues)
 - **Questions**: Open an issue or discussion on GitHub
 
 ---
 
-**Made with ❤️ for students learning the connections between Calculus and Computer Science**
+Made for students learning the connections between Calculus and Computer Science
