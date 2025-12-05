@@ -8,7 +8,7 @@ An interactive, web-based visualization tool that maps the relationships between
 
 ## Recent Updates
 
-**December 2024:**
+**December 2025:**
 - Added 33 missing Calculus II topics, including all 5 differential equations topics (AW, AX, AY, AZ, BA)
 - Added all missing connections between calculus topics (33 new edges)
 - Fixed topic code mappings for nodes Z (Der15), AD (Int4), and AH (Int10)
@@ -218,4 +218,3 @@ This project is open source and available for educational purposes. Free to use,
 
 ---
 
-Made for students learning the connections between Calculus and Computer Science
