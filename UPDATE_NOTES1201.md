@@ -191,17 +191,3 @@ These fixes ensure that:
 2. The sidebar navigation correctly identifies and highlights topics
 3. Topic filtering and searching work accurately
 4. The relationship between graph nodes and CSV topic definitions is maintained
-
-## Files Modified
-
-- `app.js`: Updated `getSpecialTopicMapping()` function to handle the three mapping issues
-
-## Testing Recommendations
-
-After deploying these changes, verify:
-1. Node Z displays "Der15" in the visualization
-2. Node AD displays "Int4" in the visualization
-3. Node AH displays "Int10" in the visualization
-4. All nodes appear in the correct course hierarchy in the sidebar
-5. Clicking on these nodes shows the correct topic information in the rationale panel
-
